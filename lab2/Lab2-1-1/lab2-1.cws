@@ -1,0 +1,116 @@
+[Workspace Header]
+Version = 900
+Pathname = "/d/TSANI/WORK/18352/Девятовская/lab 2/lab2-1.cws"
+CVI Dir = "/c/program files/national instruments/cvi90"
+CVI Shared Dir = "/C/Program Files/National Instruments/Shared/CVI"
+CVI Pub Local Dir = "/C/Documents and Settings/All Users/Application Data/National Instruments/CVI90"
+CVI Pub Global Dir = "/C/Documents and Settings/All Users/Application Data/National Instruments/CVI"
+IVI Standard Root Dir = "/C/Program Files/IVI"
+VXIplug&play Framework Dir = "/C/Program Files/IVI Foundation/VISA/winnt"
+Number of Projects = 1
+Active Project = 1
+Project 0001 = "lab2-1.prj"
+Drag Bar Left = 280
+Window Top = 50
+Window Left = 226
+Window Bottom = 998
+Window Right = 1581
+Maximized = False
+Maximized Children = True
+Max Number Of Errors = 20
+Track Include File Dependencies = True
+Prompt For Missing Includes = True
+Stop On First Error File = False
+Bring Up Err Win For Warnings = True
+Show Build Dialog = False
+Save Changes Before Running = "Always"
+Hide Windows = False
+Break At First Statement = False
+Sort Type = "File Name"
+Number of Opened Files = 3
+Window Confinement Region Enabled = True
+MainColumnWidth = 261
+FileDateColumnWidth = 70
+FileSizeColumnWidth = 70
+StatusColumnWidth = 70
+
+[Project Header 0001]
+Version = 900
+Don't Update DistKit = False
+Platform Code = 4
+Build Configuration = "Debug"
+Warn User If Debugging Release = 1
+Batch Build Release = False
+Batch Build Debug = False
+Force Rebuild = False
+
+[File 0001]
+Path = "/d/TSANI/WORK/18352/Девятовская/lab 2/lab2-1.c"
+File Type = "CSource"
+Disk Date = 3281975969
+In Projects = "1,"
+Window Top = 32
+Window Left = 6
+Window Z-Order = 1
+Source Window State = "1,93,93,93,24,28,28,0,0,110,0,0,0,0,0,53,47,0,53,4,427,808,1,0,"
+
+[File 0002]
+Path = "/d/TSANI/WORK/18352/Девятовская/lab 2/lab2-1.uir"
+File Type = "User Interface Resource"
+Disk Date = 3281976414
+In Projects = "1,"
+Window Top = 92
+Window Left = 38
+Window Height = 427
+Window Width = 808
+Window Z-Order = 2
+
+[File 0003]
+Path = "/c/program files/national instruments/cvi90/extlib/tsani.lib"
+File Type = "Library"
+Disk Date = 3281980747
+In Projects = "1,"
+
+[File 0004]
+Path = "/d/TSANI/WORK/18352/Девятовская/lab 2/lab2-1.h"
+File Type = "Include"
+Disk Date = 3281975600
+In Projects = ""
+Window Top = 92
+Window Left = 38
+Window Z-Order = 3
+Source Window State = "1,18,19,19,0,82,82,0,0,80,0,0,0,0,0,25,0,0,17,79,427,808,1,0,"
+
+[Build Options 0001]
+Generate Browse Info = True
+Enable Uninitialized Locals Runtime Warning = True
+Execution Trace = "Disabled"
+Debugging Level = "Standard"
+Break On Library Errors = True
+Break On First Chance Exceptions = False
+Execution Target Address = "Local desktop computer"
+Execution Target Port = 0
+Execution Target Type = 0
+
+[SCC Options 0001]
+Use global settings = True
+SCC Provider = ""
+SCC Project = ""
+Local Path = ""
+Auxiliary Path = ""
+Perform Same Action For .h File As For .uir File = "Ask"
+Perform Same Action For .cds File As For .prj File = "Ask"
+Username = ""
+Comment = ""
+Use Default Username = False
+Use Default Comment = False
+Suppress CVI Error Messages = False
+Always show confirmation dialog = True
+
+[DLL Debugging Support 0001]
+External Process Path = ""
+
+[Command Line Args 0001]
+Command Line Args = ""
+Working Directory = ""
+
