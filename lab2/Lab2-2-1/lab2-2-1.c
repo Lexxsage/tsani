@@ -18,6 +18,10 @@
 #include "lab2-2-1.h"
 #include "toolbox.h"
 
+#define dac_max_code 255
+#define adc_max_code 1024
+#define dac_max_volt 3.3 
+#define adc_max_volt 2.56
 //==============================================================================
 // Constants
 
@@ -99,65 +103,56 @@ int read (int address, int subaddress)
 	
 	return (r0 | (r1<<8)); 
 }
-void WriteDAC(double U)
-{
-		int Code;
-		Code=256/3.3*U;
-		if (Code<0) U=0;
-		if (Code>255) U=255;
-		write(2,2,Code);
-}
-void Snat()
-{
-	int reg;
-	reg = read(2, 0x11);
-	reg = reg|0x2;
-	write(2, 0x11, reg);
-}
 
-int ACP()
-{
-	int codeACP;
-	unsigned char r=0x00;
-	unsigned char s=0x00;
-	
-	write(2, 0x10, 5); //?????.
 
-	//????????
-	write(2, 0x12, 0);  //???.
-	write(2, 0x13, 0);  //?????.
-	write(2, 0x14, 0);   //??????  
-	
-	Snat();
-	Delay(2);
-	write(2, 0x11, 1);   //????????? ????? Start ? IACK ? ????????? ??????
-	
-	// ????? ????? ???????? ??????   
-	
-	while (s!=0x20)
+double dac_code_to_voltage(int code)
+{
+	return (double)code/dac_max_code*dac_max_volt;
+}
+double adc_code_to_voltage(int code)
+{
+	return (double)code/adc_max_code*adc_max_volt;
+}
+int dac_voltage_to_code(double voltage)
+{
+	return (int)(voltage/dac_max_volt*dac_max_code);
+}
+int adc_voltage_to_code(double voltage)
+{
+	return (int)(voltage/adc_max_volt*adc_max_code);
+}
+void dac_init(void)
+{
+	write(2,0x00,0x07);
+}
+void adc_init(void)
+{
+	write(2,0x10,0x07);
+}
+void dac_out(int channel, int code)
+{
+	write(2, channel, code);
+}
+void adc_in(int channel,double *data)
+{
+	write(2,0x12,0xff);
+	write(2,0x13,0xff); 
+	write(2,0x14,0xff);//initialaze
+	write(2,0x11,0x03);//start1 iack1
+	int check = 0x03;
+	while (!((check)&(0x01)==0x01))
 	{
-		portIn(2, &r);
-		s = r&0x20;
-	}  
-	Delay(1);
-	Snat();  
-	codeACP=read(2, 0x16);
-	return codeACP; 
-	
+		check = read(2,0x11);
+		Delay(0.1);
+	}
+    check = read(2,channel);
+	*data = ((double)check/adc_max_code*adc_max_volt);
 }
-void Prer()
-{
-	int reg;
-	reg = read(2, 0x11);
-	reg = reg|0x4;
-	write(2, 0x11, reg);
-}
-
 
 //==============================================================================
 // Global functions
 
-/// HIFN The main entry-point function.
+// HIFN The main entry-point function.
 int main (int argc, char *argv[])
 {
     int error = 0;
@@ -166,6 +161,8 @@ int main (int argc, char *argv[])
     /* initialize and load resources */
     nullChk (InitCVIRTE (0, argv, 0));
     errChk (panelHandle = LoadPanel (0, "lab2-2-1.uir", PANEL));
+	adc_init();
+	dac_init();
     
     /* display the panel and run the user interface */
     errChk (DisplayPanel (panelHandle));
@@ -216,36 +213,67 @@ int  CVICALLBACK DoRead(int panel, int control, int event, void *callbackData, i
 	return 0;
 }
 
-int  CVICALLBACK adc(int panel, int control, int event, void *callbackData, int eventData1, int eventData2){
-	 int codeACP;
-	switch (event) 
-	{
+int CVICALLBACK DAC (int panel, int control, int event,
+		void *callbackData, int eventData1, int eventData2) {
+	switch (event) {
 		case EVENT_COMMIT:
-			
-			double U;
-			codeACP=ACP();
-			U = codeACP*2.56/1024;
-			SetCtrlVal(PANEL, PANEL_DATA, U);
+			{
+				int code;
+				switch(control)
+				{
+					case PANEL_DAC_VOLT:
+						{
+							double data;
+							GetCtrlVal(PANEL, PANEL_DAC_VOLT, &data);
+							code = dac_voltage_to_code(data);
+							SetCtrlVal(PANEL, PANEL_DAC_CODE, code);
+							break;
+						}
+					case PANEL_DAC_CODE:
+						{
+							GetCtrlVal(PANEL, PANEL_DAC_CODE, &code);
+							SetCtrlVal(PANEL, PANEL_DAC_VOLT, dac_code_to_voltage(code));
+							break;
+						};
+				}
+				dac_out(0x02,code);
+				dac_out(0x03,code);
+				break;
+			}
+		case EVENT_LEFT_CLICK:
+
+	
 			break;
 	}
 	return 0;
-
 }
 
-int  CVICALLBACK prep(int panel, int control, int event, void *callbackData, int eventData1, int eventData2){
-	 switch (event) 
-	{
+int CVICALLBACK ADC (int panel, int control, int event,
+		void *callbackData, int eventData1, int eventData2) {
+	switch (event) {
 		case EVENT_COMMIT:
-			Prer();
-	}
-	return 0;
-}
+			{
+				double data;
+				adc_in(0x16,&data);
+				SetCtrlVal(PANEL, PANEL_VIN1_VOLT, data);
+				SetCtrlVal(PANEL, PANEL_Vin1_code, adc_voltage_to_code(data));
+				adc_in(0x17,&data);
+				SetCtrlVal(PANEL, PANEL_VIN2_VOLT, data);
+				SetCtrlVal(PANEL, PANEL_Vin2_code, adc_voltage_to_code(data));
+				break;
+			}
+		case EVENT_LEFT_CLICK:
 
-int  CVICALLBACK snat(int panel, int control, int event, void *callbackData, int eventData1, int eventData2){
-	 switch (event) 
-	{
-		case EVENT_COMMIT:
-			Snat();
+			break;
+		case EVENT_RIGHT_CLICK:
+
+			break;
+		case EVENT_GOT_FOCUS:
+
+			break;
+		case EVENT_DISCARD:
+
+			break;
 	}
 	return 0;
 }
