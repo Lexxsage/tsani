@@ -1,0 +1,117 @@
+// ↓↓↓ Эти настройки можно менять ↓↓↓
+//#define USE_SERIAL // использование последовательного порта значительно замедляет скорость работы
+double temperatures[] = { // -128.0...+127.75, кратно 0.25
+  -128.00,
+  -127.75,
+  -127.5,
+  -127.25,
+  -127.00,
+  -2.00,
+  -1.75,
+  -1.5,
+  -1.25,
+  -1.0,
+  -0.75,
+  -0.5,
+  -0.25,
+  0.0,
+  0.25,
+  0.5,
+  0.75,
+  1.0,
+  127.0,
+  127.25,
+  127.5,
+  127.75
+};
+int number_of_temperatures_to_send = 22; // сколько элементов массива посылать, разрешённые значения: 1...длина массива
+// ↑↑↑ Эти настройки можно менять ↑↑↑
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#include <Wire.h>
+int index = 0;
+
+void setup()
+{
+  #ifdef USE_SERIAL
+  Serial.begin(2000000);
+  Serial.println();
+  #endif
+  for (int i = 2; i < 10; i++) {
+    pinMode(i, OUTPUT);
+  }
+  delay(10);
+  Wire.begin(0x28);
+  Wire.onReceive(RxComplete);
+  Wire.onRequest(TxRequest);
+}
+
+void loop()
+{
+}
+
+void RxComplete(int length) {
+  #ifdef USE_SERIAL
+  Serial.print(length);
+  Serial.println(" bytes received");
+  #endif
+  RxFlush();
+}
+
+void TxRequest() {
+  signed char temperature_int = floor(temperatures[index]);
+  unsigned char temperature_fraq = (temperatures[index] - temperature_int)*4;
+  double temperature = temperature_int + temperature_fraq/4.0;
+  temperature_fraq <<= 6;
+  #ifdef USE_SERIAL
+  Serial.print("Sending temperature ");
+  Serial.print(temperature);
+  Serial.print(" (first byte = 0x");
+  Serial.print((unsigned char)temperature_int, HEX);
+  Serial.print(", second byte = 0x");
+  Serial.print(temperature_fraq, HEX);
+  Serial.println(")");
+  #endif
+  unsigned char data[2];
+  data[0] = temperature_int;
+  data[1] = temperature_fraq;
+  Wire.write(data, 2);
+  index++;
+  if (index >= number_of_temperatures_to_send) index = 0;
+}
+
+void RxFlush(void) {
+  while (Wire.available()) Wire.read();
+  #ifdef USE_SERIAL
+  Serial.println("Data flushed");
+  #endif
+}

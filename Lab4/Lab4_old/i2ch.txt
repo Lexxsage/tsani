@@ -1,0 +1,56 @@
+//==============================================================================
+//
+// Title:       i2c.h
+// Purpose:     A short description of the interface.
+//
+// Created on:  05.09.2008 at 17:38:02 by Gennady Kuzin.
+// Copyright:   NSU. All Rights Reserved.
+//
+//==============================================================================
+
+#ifndef __i2c_H__
+#define __i2c_H__
+
+#ifdef __cplusplus
+    extern "C" {
+#endif
+
+//==============================================================================
+// Include files
+
+#include "cvidef.h"
+
+//==============================================================================
+// Constants
+
+//==============================================================================
+// Types
+
+//==============================================================================
+// External variables
+
+//==============================================================================
+// Global functions
+void initPorts(void); //
+int sendStart(void);  //
+int sendStop (void);  
+int sendBit (int bit);//
+int sendByte (int byte);//
+int readBit(int* bit);
+int readByte(int* byte);
+int currentSDA(void);
+int getACK(void); //
+void sendACK(void);
+void NACK(void);
+void writeBus(int sda, int scl); //
+int readBus(int* sda, int* scl);   //
+
+
+
+int Declare_Your_Functions_Here (int x);
+
+#ifdef __cplusplus
+    }
+#endif
+
+#endif  /* ndef __i2c_H__ */

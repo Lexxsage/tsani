@@ -1,0 +1,320 @@
+// ↓↓↓ Библиотека tsanilib ↓↓↓
+/*
+Библиотека tsanilib для платы Arduino Uno, версия 2021-05-04
+Просто скопируйте код в свой проект
+
+Соответствие между линиями tsanilib и Arduino Uno:
+port 0 line 7...0 = 9...2
+port 1 line 7...0 = A4...A0, 12, 11, 10
+port 2 отсутствует
+Не используются линии 0 (Rx), 1 (Tx), 13 (LED), A5
+
+Задайте ненулевую PORTS_DELAY_MS, если хотите добавить задержку
+перед функциями portIn(), portOut(), portMask().
+ЗАПРЕЩЕНО вносить другие изменения в библиотеку.
+
+Вызовите tsanilib_init() перед использование библиотеки
+(например, в самом начале функции setup()). При этом все линии
+окажутся в режиме ввода (Hi-Z).
+
+ЗАПРЕЩЕНО использовать функцию tsanilib_get_arduino_line(),
+переменные tsanilib_write, tsanilib_mask.
+ЗАПРЕЩЕНО полагаться на определённую последовательность
+изменения линий порта (другими словами, ваша программа
+должна работать, даже если заменить
+for (char i = 0; i < 8; i++) на for (char i = 7; i >= 0; i--)
+или ещё как-нибудь).
+
+*/
+#define PORTS_DELAY_MS 0 // задержка в мс перед любым обращением к портам; 0 — без задержки
+
+/*
+Виртуальные регистры.
+Нужны, чтобы pull-up-резисторы
+никогда не включались
+*/
+unsigned char tsanilib_write[2] = {0, 0};
+unsigned char tsanilib_mask[2] = {0, 0};
+
+// именно эта функция сопоставляет линии Ардуино линиям портов tsanilib; если нужно другое сопоставление, достаточно изменить лишь её
+int tsanilib_get_arduino_line(char port, char bit) {
+  switch (port) {
+    case 0:
+    switch (bit) {
+      case 0: return 2;
+      case 1: return 3;
+      case 2: return 4;
+      case 3: return 5;
+      case 4: return 6;
+      case 5: return 7;
+      case 6: return 8;
+      case 7: return 9;
+    }
+    case 1:
+    switch (bit) {
+      case 0: return 10;
+      case 1: return 11;
+      case 2: return 12;
+      case 3: return A0;
+      case 4: return A1;
+      case 5: return A2;
+      case 6: return A3;
+      case 7: return A4;
+    }
+  }
+  return -1;
+}
+
+void portIn(char port, unsigned char *data) {
+  #if PORTS_DELAY_MS
+  delay(PORTS_DELAY_MS);
+  #endif
+  *data = 0;
+  for (char i = 0; i < 8; i++) {
+    *data |= digitalRead(tsanilib_get_arduino_line(port, i))<<i;
+  }
+  return;
+}
+
+void portOut(char port, unsigned char data) {
+  #if PORTS_DELAY_MS
+  delay(PORTS_DELAY_MS);
+  #endif
+  tsanilib_write[port] = data;
+  for (char i = 0; i < 8; i++) {
+    if (tsanilib_mask[port]&(1<<i)) { // работаем лишь с линиями вывода; линии ввода игнорируем
+      digitalWrite(tsanilib_get_arduino_line(port, i), data&(1<<i));
+    }
+  }
+}
+
+void portMask(char port, unsigned char mask) {
+  #if PORTS_DELAY_MS
+  delay(PORTS_DELAY_MS);
+  #endif
+  #undef PORTS_DELAY_MS
+  tsanilib_mask[port] = mask;
+  for (char i = 0; i < 8; i++) {
+    if (mask & (1<<i)) { // это линия вывода, надо записать в соответствии с регистром записи
+      pinMode(tsanilib_get_arduino_line(port, i), OUTPUT);
+      digitalWrite(tsanilib_get_arduino_line(port, i), tsanilib_write[port]&(1<<i));
+    } else { // это линия ввода
+      pinMode(tsanilib_get_arduino_line(port, i), INPUT);
+    }
+  }
+  return;
+}
+
+void tsanilib_init(void) {
+  portMask(0,0);
+  portMask(1,0);
+  portOut(0,0);
+  portOut(1,0);
+}
+/* ↑↑↑ Библиотека tsanilib ↑↑↑ */
+
+void setup()
+{
+  tsanilib_init();
+  Serial.begin(9600);
+  Serial.setTimeout(2147483647L);
+  Serial.print("\nInitialization...");
+ 
+  // ↓↓↓ Перевод шины I2C в начальное состояние ↓↓↓
+  i2c_init();
+  // ↑↑↑ Перевод шины I2C в начальное состояние ↑↑↑
+  
+  // ↓↓↓ Ведомому требуется время на инициализацию ↓↓↓
+  delay(100);
+  // ↑↑↑ Ведомому требуется время на инициализацию ↑↑↑
+  Serial.println(" Ready!");
+  
+ //  Чтение и вывод имени
+  read_name();
+  
+}
+
+double Temperature;
+
+void loop()
+{
+  // Бегущая единица
+  running_unit();
+  
+ //  Считывание температуры
+
+  Read_tempeature(&Temperature);
+  Serial.println(Temperature);
+}
+
+void i2c_init(){
+  portMask(0,0x7F);//SDAin  на запись
+}
+
+
+void Write_to_i2c(int sda, int scl) {
+  int data=(sda<<3)|(scl<<4)| 0x07;//SDAout,SCLout
+  portOut(0,data);
+}
+
+
+void Read_to_i2c(int *sda, int *scl) {
+  unsigned char data1,data2;
+  portIn(0,&data1);
+  portIn(0,&data2);
+  *sda=(data1>>7)&0x01;//SDAIn
+  *scl=(data2)&0x01;//SCLIn
+}
+
+void Start(){
+  Write_to_i2c(1,1);
+  Write_to_i2c(0,1);
+  Write_to_i2c(0,0);
+}
+
+void Stop(){
+  Write_to_i2c(0,0);
+  Write_to_i2c(0,1);
+  Write_to_i2c(1,1);
+}
+
+int i2c_sda(){//текущее состояние
+  unsigned char data;
+  portIn(0,&data);
+  return (data>>7)&0x01;
+}
+
+void SendBit(int Bit){
+  Write_to_i2c(i2c_sda(),0);
+  Write_to_i2c(Bit,0);
+  Write_to_i2c(Bit,1);
+  Write_to_i2c(Bit,0);
+}
+
+void SendByte(int Byte){
+  for(int i = 0; i<8; i++)
+  SendBit((Byte >> (7-i))&0x01);
+  
+}
+
+int ReadBit(){
+  int Bit;
+  Write_to_i2c(1,0);
+  Write_to_i2c(1,1);//размыкаем ключ
+  Bit=i2c_sda();
+  Write_to_i2c(1,0);
+  return Bit;
+}
+
+void ReadByte (int* Byte){
+  int data=0;
+  for(int i=0; i<8;i++)
+  { 
+    data=data|(ReadBit()<<(7-i));
+  }
+  *Byte=data;
+}
+
+
+void getAck(){ //бит подтверждения
+  int Bit;
+  Bit=ReadBit();
+  if(Bit !=0) Serial.print("NOT_ACKNOWLEDG");
+  
+}
+
+
+void sendNotAck(){
+  SendBit(1); 
+}
+
+void sendAck(){
+   SendBit(0);
+}
+
+void Write_transaction(int data,int adr, int subadr){
+  adr=adr<<1;
+  Start();
+  SendByte(adr);
+  getAck();
+  SendByte(subadr);
+  getAck();
+  SendByte(data);
+  getAck();
+  Stop();
+}
+
+void Read_transaction(int* data,int adr, int subadr, int n){
+  adr=adr<<1;
+  Start();
+  SendByte(adr);
+  getAck();
+  SendByte(subadr);
+  getAck();
+  Stop();
+  Start();
+  adr=adr|0x01;
+  SendByte(adr);
+  getAck();
+  for (int i=0;i<n;i++){
+    ReadByte(data+i);
+    if(i !=(n-1)) sendAck();
+  }
+  sendNotAck();
+  Stop();
+}
+
+
+void read_name(){
+  char result[9];
+  result[8]=0;
+  int data=0;
+  for (int i=0;i<8;i++)
+  {
+    Read_transaction(&data,123,(0x08+i),1);
+    result[i]=(char)data;
+  }
+  Serial.println("\n");
+  Serial.write(result);
+  Serial.println();
+}  
+
+void Read_tempeature(double* value){
+  *value=0;
+  int temp,b;
+  int data=0;
+  int Byte1=0;
+  int Byte2=0;
+  int adr=0x28;	
+  adr=(adr<<1)|0x01;
+  Start();
+  SendByte(adr);
+  getAck();
+  ReadByte(&Byte1);
+  sendAck();
+  ReadByte(&Byte2);
+  data=((Byte1>>7)&0x01);
+  if (data==1)
+  {
+    b=Byte1;
+    temp=b|0xFF00;
+    data=temp;
+  }
+  if (data==0)
+  {
+    data=Byte1;
+  }
+  Byte2=(Byte2>>6)&0x03;
+  *value=(double)data+Byte2*0.25;
+  sendNotAck();
+  Stop();
+}
+
+void running_unit(){
+  
+   for (int i=1; i<129;i*=2)
+  {
+    Write_transaction(i,123,0);
+    delay(25);
+  }
+}

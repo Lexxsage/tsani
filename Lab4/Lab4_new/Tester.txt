@@ -1,0 +1,181 @@
+// ↓↓↓ Эти настройки можно менять ↓↓↓
+//#define USE_SERIAL // использование последовательного порта значительно замедляет скорость работы
+
+#define SLAVE_ADDRESS 123
+
+unsigned char tester_regs[16] = {
+  0, 0, 0, 0, 0, 0, 0, 0, // write
+  'N', 'I', 'K', 'I', 'T', 'A', 0, 0 // read
+};
+// ↑↑↑ Эти настройки можно менять ↑↑↑
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#include <Wire.h>
+unsigned char tester_read_address = 0;
+
+void setup()
+{
+  Serial.begin(2000000);
+  #ifdef USE_SERIAL
+  Serial.println();
+  #endif
+  for (int i = 2; i < 10; i++) {
+    pinMode(i, OUTPUT);
+  }
+  setIndicators(0);
+  delay(10);
+  Wire.begin(SLAVE_ADDRESS);
+  Wire.onReceive(RxComplete);
+  Wire.onRequest(TxRequest);
+}
+
+void loop()
+{
+  if (-1 != Serial.read()) {
+    Wire.requestFrom(0x28, 2);
+    Serial.print("0x");
+    Serial.print(Wire.read(), HEX);
+    Serial.print(" 0x");
+    Serial.println(Wire.read(), HEX);
+  }
+}
+
+void RxComplete(int length) {
+  unsigned char address = 0;
+  unsigned char data = 0;
+  #ifdef USE_SERIAL
+  Serial.print(length);
+  Serial.println(" bytes received");
+  #endif
+  switch (length) {
+    case 1: // запоминаем адрес регистра чтения
+    tester_read_address = Wire.read();
+    #ifdef USE_SERIAL
+    Serial.print("Data will be read from address ");
+    Serial.println(tester_read_address);
+    #endif
+    break;
+    case 2: // запись в регистр записи
+    address = Wire.read();
+    data = Wire.read();
+    if (address < 8) {
+      tester_regs[address] = data;
+    }
+    if (!address) setIndicators(data);
+    #ifdef USE_SERIAL
+    Serial.print("Value ");
+    Serial.print(data);
+    Serial.print(" stored into register ");
+    Serial.println(address);
+    #endif
+    break;
+    default:
+    RxFlush();
+    break;
+  }
+}
+
+void TxRequest() {
+  #ifdef USE_SERIAL
+  Serial.print("Sending read register address = ");
+  Serial.print(tester_read_address);
+  Serial.print(", data = ");
+  #endif
+  if (tester_read_address < 8 || tester_read_address > 15) {
+    Wire.write(0);
+    #ifdef USE_SERIAL
+    Serial.println("0, because the address is incorrect.");
+    #endif
+  } else {
+    Wire.write(tester_regs[tester_read_address]);
+    #ifdef USE_SERIAL
+    Serial.println(tester_regs[tester_read_address]);
+    #endif
+  }
+}
+
+void setIndicators(unsigned char data) {
+  for (int i = 0; i < 8; i++) {
+    digitalWrite(i+2, data&(1<<i));
+  }
+}
+
+void RxFlush(void) {
+  while (Wire.available()) Wire.read();
+  #ifdef USE_SERIAL
+  Serial.println("Data flushed");
+  #endif
+}
